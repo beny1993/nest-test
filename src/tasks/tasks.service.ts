@@ -1,66 +1,26 @@
-import { CreateTaskDto } from './dto/create-task.dto';
-import { Tasks, TaskStatus } from './task.model';
-import { Injectable, NotFoundException, Param } from '@nestjs/common';
+import { RabbitRPC } from '@golevelup/nestjs-rabbitmq';
+import {
+  Injectable,
+  NotFoundException,
+  OnModuleInit,
+  Param,
+} from '@nestjs/common';
+import { retry } from 'rxjs';
+import { Task } from 'src/domain/entity/task-entity';
+import { TaskStatus } from 'src/domain/enum/task-status.enum';
 import { v4 as uuidv4 } from 'uuid';
-import { stat } from 'fs';
-import { GetTasksFilterDto } from './dto/get-tasks-filter.dto';
 @Injectable()
-export class TasksService {
-  private tasks: Tasks[] = [];
-
-  getAllTasks(): Tasks[] {
-    return this.tasks;
+export class TasksService implements OnModuleInit {
+  async onModuleInit() {
+    await this.ehsan();
   }
 
-  createTasks(createTaskDto: CreateTaskDto): Tasks {
-    const { title, description } = createTaskDto;
-
-    const task: Tasks = {
-      id: uuidv4(),
-      title,
-      description,
-      status: TaskStatus.OPEN,
-    };
-
-    this.tasks.push(task);
-    return task; //for front end help to show the new task which was made.
-  }
-
-  getTaskById(id: string): Tasks {
-    const found = this.tasks.find((task) => task.id === id);
-
-    if (!found) {
-      throw new NotFoundException(`Task with ID "${id}" not found.`);
-    }
-
-    return found;
-  }
-
-  deleteTaskById(id: string): void {
-    const found = this.getTaskById(id);
-    this.tasks = this.tasks.filter((task) => task.id !== found.id);
-  }
-
-  updateTaskStatus(id: string, status: TaskStatus): Tasks {
-    const task = this.getTaskById(id);
-    task.status = status;
-    return task;
-  }
-
-  getTaskWithFilter(filterDto: GetTasksFilterDto): Tasks[] {
-    const { status, search } = filterDto;
-    let tasks = this.getAllTasks();
-    if (status) {
-      tasks = tasks.filter((task) => task.status === status);
-    }
-
-    if (search) {
-      tasks = tasks.filter(
-        (task) =>
-          task.title.includes(search) || task.description.includes(search),
-      );
-    }
-
-    return tasks;
+  @RabbitRPC({
+    exchange: 'Exchange',
+    routingKey: 'bep20.token.transfer',
+    queue: 'bep20.token.transfer',
+  })
+  async ehsan() {
+    console.log('ehsan');
   }
 }
