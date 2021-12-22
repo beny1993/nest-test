@@ -1,3 +1,4 @@
 export interface JwtPayload {
-    username: string
+    username: string;
+    isSecondFactorAuthenticated?: boolean;
 }

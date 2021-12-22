@@ -7,7 +7,7 @@ import * as bcrypt from 'bcrypt'
 @EntityRepository(User)
 export class UserRepository extends Repository<User> {
 
-    private async hashPassword(password: string, salt: string): Promise<string> {
+    private hashPassword(password: string, salt: string): Promise<string> {
         return bcrypt.hash(password, salt);
     }
 
@@ -22,25 +22,46 @@ export class UserRepository extends Repository<User> {
 
         try {
             await user.save();
-        }catch (e) {
-          if(e.code === '23505'){
-              throw new ConflictException('UserName already exists')
-          }else {
-              throw new InternalServerErrorException();
-          }
+        } catch (e) {
+            if (e.code === '23505') {
+                throw new ConflictException('UserName already exists')
+            } else {
+                throw new InternalServerErrorException();
+            }
         }
     }
 
 
-    async  validateUserPassword(authCredentialDto: AuthCredentialDto):Promise<string> {
-        const {password, username} =authCredentialDto;
+    async validateUserPassword(authCredentialDto: AuthCredentialDto): Promise<string> {
+        const {password, username} = authCredentialDto;
         const user = await this.findOne({username: username});
 
-        if(user && await user.validatePassword(password)){
+        if (user && await user.validatePassword(password)) {
             return user.username
-        }else {
+        } else {
             return null;
         }
-
     }
+
+
+    async setTwoFactorAuthenticationSecret(secret: string, userId: number) {
+        return this.update(userId, {twoFactorAuthenticationSecret: secret})
+    }
+
+
+    async turnOnTwoFactorAuthentication(userId: number) {
+        return await this.update(userId, {isTwoFactorAuthenticationEnabled: true})
+    }
+
+
+    async isTwoFactorAuthenticationEnabled(authCredentialDto: AuthCredentialDto){
+        const { username } = authCredentialDto;
+
+        const user = await this.findOne({username: username})
+
+        if(user){
+            return user.isTwoFactorAuthenticationEnabled
+        }
+    }
+
 }
